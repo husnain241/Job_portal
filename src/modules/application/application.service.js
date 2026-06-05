@@ -14,12 +14,14 @@ const applyForJob = async (candidateId, jobId, body, file) => {
   if (existing) throw new ApiError(409, 'You have already applied for this job');
 
   // file.path is set by Multer after upload
+  // On Windows, Multer uses backslashes (\) in paths.
+  // We normalize to forward slashes so the URL works correctly.
   if (!file) throw new ApiError(400, 'Resume is required');
 
   const application = await Application.create({
     job: jobId,
     candidate: candidateId,
-    resumeUrl: file.path,
+    resumeUrl: file.path.replace(/\\/g, '/'), // normalize Windows backslashes
     coverLetter: body.coverLetter || '',
   });
 

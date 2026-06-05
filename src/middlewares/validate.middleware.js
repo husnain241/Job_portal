@@ -5,7 +5,8 @@ const ApiError = require('../utils/ApiError');
 const validate = (schema) => (req, res, next) => {
   // schema.validate() checks the request body against the Joi rules
   // abortEarly: false means collect ALL errors, not just the first one
-  const { error } = schema.validate(req.body, { abortEarly: false });
+  // value contains the final validated body WITH Joi defaults applied
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
 
   if (error) {
     // error.details is an array of all validation errors
@@ -16,7 +17,9 @@ const validate = (schema) => (req, res, next) => {
     return next(new ApiError(400, 'Validation Error', errorMessages));
   }
 
-  // If validation passes, move to the next middleware or controller
+  // If validation passes, apply the validated (and defaulted) value to req.body
+  // This ensures Joi defaults (e.g. role: 'candidate') are set on the request
+  req.body = value;
   next();
 };
 

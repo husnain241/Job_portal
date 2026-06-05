@@ -14,4 +14,7 @@ connectDB().then(() => {
     console.log(`🚀 Server running on http://localhost:${port}`);
     console.log(`📄 API Docs at http://localhost:${port}/api-docs`);
   });
+}).catch((err) => {
+  console.error('❌ Server failed to start:', err.message);
+  process.exit(1);
 });

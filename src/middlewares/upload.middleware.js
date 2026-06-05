@@ -8,7 +8,8 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // cb is a callback — cb(error, folderPath)
     // null means no error
-    cb(null, 'uploads/resumes');
+    // Use absolute path so it works regardless of where the server is started from
+    cb(null, path.join(__dirname, '..', '..', 'uploads', 'resumes'));
   },
 
   // filename: what to name the saved file

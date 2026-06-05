@@ -78,12 +78,12 @@ const userSchema = new mongoose.Schema(
 // ─── MIDDLEWARE (also called "hooks") ───────────────────────────────
 // This runs BEFORE a user document is saved to MongoDB
 // Its job: hash the password so we never store plain text passwords
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   // "this" refers to the current user document being saved
 
   // isModified('password') checks if the password field was changed
   // If user is just updating their name, we don't re-hash the password
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) return;
 
   // bcrypt.hash() scrambles the password
   // 12 is the "salt rounds" — higher = more secure but slower
@@ -91,7 +91,6 @@ userSchema.pre('save', async function (next) {
   this.password = await bcrypt.hash(this.password, 12);
 
   // next() tells Mongoose to continue saving the document
-  next();
 });
 
 // ─── INSTANCE METHOD ─────────────────────────────────────────────────

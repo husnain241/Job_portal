@@ -2,58 +2,53 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const swaggerUi = require('swagger-ui-express');
-const YAML = require('yamljs');
 const path = require('path');
+const fs = require('fs');
 
 const routes = require('./routes/index');
 const errorMiddleware = require('./middlewares/error.middleware');
-const { clientUrl } = require('./config/env');
 
 const app = express();
 
-// ── SECURITY MIDDLEWARES ──────────────────────────────────────────
-// helmet adds ~15 security-related HTTP headers automatically
+// Security
 app.use(helmet());
-
-// cors allows your frontend (running on a different port/domain) to call the API
 app.use(cors({
-  origin: clientUrl,
-  credentials: true, // allow cookies to be sent cross-origin
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true,
 }));
 
-// ── BODY PARSERS ─────────────────────────────────────────────────
-app.use(express.json());              // parse JSON request bodies
-app.use(express.urlencoded({ extended: true })); // parse form data
-app.use(cookieParser());              // parse cookies
+// Body parsers
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// ── STATIC FILES ─────────────────────────────────────────────────
-// Makes the uploads folder publicly accessible via URL
+// Static files
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
-// ── SWAGGER DOCS ─────────────────────────────────────────────────
+// Swagger (optional — won't crash if file missing)
 try {
+  const swaggerUi = require('swagger-ui-express');
+  const YAML = require('yamljs');
   const swaggerDocument = YAML.load(path.join(__dirname, '..', 'swagger.yaml'));
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 } catch (e) {
-  console.log('Swagger file not found, skipping docs');
+  // swagger.yaml not found — skip silently
 }
 
-// ── HEALTH CHECK ─────────────────────────────────────────────────
-app.get('/health', (req, res) => {
+// Health check
+app.get('/health', function(req, res) {
   res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
 
-// ── API ROUTES ───────────────────────────────────────────────────
+// All API routes
 app.use('/api', routes);
 
-// ── 404 HANDLER ──────────────────────────────────────────────────
-app.use((req, res) => {
+// 404 handler
+app.use(function(req, res) {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// ── CENTRAL ERROR HANDLER ─────────────────────────────────────────
-// Must be LAST — Express identifies error middleware by 4 params
+// ⚠️ ERROR MIDDLEWARE — must be last, must have exactly 4 params
 app.use(errorMiddleware);
 
 module.exports = app;

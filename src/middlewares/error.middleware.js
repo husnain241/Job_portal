@@ -1,39 +1,39 @@
-const ApiError = require('../utils/ApiError');
-const { nodeEnv } = require('../config/env');
+/* eslint-disable no-unused-vars */
+const errorMiddleware = function(err, req, res, next) {
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal Server Error';
+  let errors = err.errors || [];
 
-// Express knows this is an error handler because it has 4 parameters
-// (err, req, res, next) — the "err" as first param is the key
-const errorMiddleware = (err, req, res, next) => {
-  // If the error is already our custom ApiError, use it directly
-  // Otherwise, create a generic 500 (Internal Server Error)
-  let error = err;
-
-  if (!(error instanceof ApiError)) {
-    // Check for MongoDB duplicate key error (e.g., email already exists)
-    // MongoDB error code 11000 means duplicate key
-    const statusCode = error.code === 11000 ? 409 : 500;
-
-    // Build a readable message from the duplicate key error
-    const message =
-      error.code === 11000
-        ? `Duplicate value: ${Object.keys(error.keyValue).join(', ')} already exists`
-        : error.message || 'Internal Server Error';
-
-    error = new ApiError(statusCode, message);
+  // MongoDB duplicate key
+  if (err.code === 11000) {
+    statusCode = 409;
+    const field = Object.keys(err.keyValue || {}).join(', ');
+    message = `${field} already exists`;
   }
 
-  // Build the response object
-  const response = {
-    success: false,
-    message: error.message,
-    errors: error.errors || [],
-    // Only show the stack trace in development mode
-    // Never expose stack traces in production (security risk)
-    ...(nodeEnv === 'development' && { stack: error.stack }),
-  };
+  // Mongoose bad ObjectId
+  if (err.name === 'CastError') {
+    statusCode = 400;
+    message = 'Invalid ID format';
+  }
 
-  // Send the error response with the correct HTTP status code
-  return res.status(error.statusCode).json(response);
+  // JWT errors
+  if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Token expired. Please login again.';
+  }
+
+  if (err.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    message = 'Invalid token. Please login again.';
+  }
+
+  return res.status(statusCode).json({
+    success: false,
+    message: message,
+    errors: errors,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  });
 };
 
 module.exports = errorMiddleware;

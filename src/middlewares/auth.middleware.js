@@ -26,7 +26,13 @@ const protect = asyncHandler(async (req, res, next) => {
 
   // jwt.verify() decodes and validates the token
   // If the token is expired or tampered, it throws an error
-  const decoded = jwt.verify(token, jwtConfig.accessSecret);
+  // We wrap it in try/catch so we return a clean 401, not a 500
+  let decoded;
+  try {
+    decoded = jwt.verify(token, jwtConfig.accessSecret);
+  } catch (err) {
+    return next(new ApiError(401, 'Invalid or expired token. Please login again.'));
+  }
 
   // Find the user in the database using the ID stored in the token
   // select('+refreshToken') includes the refreshToken field (normally hidden)

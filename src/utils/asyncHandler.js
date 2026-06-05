@@ -10,10 +10,13 @@
 // If an error occurs, asyncHandler catches it and passes it to next()
 // which triggers the central error handler middleware
 
-const asyncHandler = (fn) => (req, res, next) => {
-  // Promise.resolve() wraps the function in a promise
-  // .catch(next) passes any error to Express's next() automatically
-  Promise.resolve(fn(req, res, next)).catch(next);
+const asyncHandler = (fn) => {
+  return function asyncHandlerWrapper(req, res, next) {
+    fn(req, res, next).catch(function(err) {
+      next(err);
+    });
+  };
 };
 
 module.exports = asyncHandler;
+

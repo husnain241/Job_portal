@@ -56,7 +56,33 @@ const registerUser = async (body) => {
   // Save refresh token to database so we can validate it later
   user.refreshToken = refreshToken;
   await user.save({ validateBeforeSave: false });
-
+  await sendEmail({
+    to: user.email,
+    subject: 'Welcome to Job Portal! 🎉',
+    html: `
+      <h2>Welcome, ${user.name}! 👋</h2>
+      <p>Thank you for registering at our Job Portal. We're excited to have you on board! 🚀</p>
+      <p>Here are some tips to get started:</p>
+      <ul>
+        <li>👤 Complete your profile to attract employers.</li>
+        <li>🔍 Browse and apply to jobs that match your skills.</li>
+        <li>📢 Enable notifications to stay updated on new job postings.</li>
+      </ul>
+      <p>If you have any questions, feel free to reply to this email. We're here to help! 😊</p>
+      <p>Best of luck in your job search! 🍀</p>
+    `,
+  });
+//   await sendEmail({
+//   to: user.email,
+//   subject: '🎭 Successful Hacked by A.. H.. 😈',
+//   html: `
+//     <h2>💻 Hacking in Progress... 🚨</h2>
+//     <p>Hello ${user.name}, 👋</p>
+//     <p>😱 Your data has been hacked by a hacker...! 🔓</p>
+//     <p>⚠️ Be careful when sharing your email with anyone.</p>
+//     <p>😎 Stay safe and secure! 🛡️</p>
+//   `,
+// });
   return { user, accessToken, refreshToken };
 };
 
@@ -98,7 +124,13 @@ const refreshAccessToken = async (incomingRefreshToken) => {
   }
 
   // Verify the refresh token is valid and not expired
-  const decoded = jwt.verify(incomingRefreshToken, jwtConfig.refreshSecret);
+  // Wrapped in try/catch so expired tokens return 401, not 500
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingRefreshToken, jwtConfig.refreshSecret);
+  } catch (err) {
+    throw new ApiError(401, 'Invalid or expired refresh token');
+  }
 
   // Find the user and check if their stored refresh token matches
   const user = await User.findById(decoded.id).select('+refreshToken');
